@@ -1098,44 +1098,87 @@
             margin: 10px 0;
         }
 
-        /* QR scanner overlay style */
-        #qr-reader {
+        /* QR scanner overlay style - FULLSCREEN */
+        .qr-fullscreen-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 400px;
-            margin: 8px auto;
-            border-radius: 24px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-        }
-
-        #qr-reader video {
-            border-radius: 24px;
-        }
-
-        .qr-scan-btn {
-            background: var(--primary-blue);
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 60px;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            cursor: pointer;
-            transition: 0.15s;
-            margin: 8px auto;
-        }
-
-        .qr-scan-btn:active {
-            transform: scale(0.96);
-            background: #0a2e8f;
-        }
-
-        .qr-wrapper {
-            display: flex;
+            height: 100%;
+            background: #000;
+            z-index: 500;
+            display: none;
             flex-direction: column;
             align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .qr-fullscreen-overlay.active {
+            display: flex;
+        }
+
+        .qr-fullscreen-overlay #qr-reader-full {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 24px;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .qr-fullscreen-overlay #qr-reader-full video {
+            width: 100%;
+            height: auto;
+            border-radius: 24px;
+        }
+
+        .qr-close-full {
+            position: absolute;
+            top: 40px;
+            right: 30px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(6px);
+            border: none;
+            color: white;
+            font-size: 32px;
+            padding: 12px 20px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: 0.15s;
+            font-weight: 700;
+        }
+
+        .qr-close-full:active {
+            transform: scale(0.94);
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        .qr-hint {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1rem;
+            margin-top: 20px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-align: center;
+            max-width: 400px;
+        }
+
+        .qr-hint i {
+            margin-right: 8px;
+        }
+
+        @media (max-width: 480px) {
+            .qr-close-full {
+                top: 20px;
+                right: 16px;
+                font-size: 24px;
+                padding: 8px 16px;
+            }
+
+            .qr-hint {
+                font-size: 0.85rem;
+            }
         }
     </style>
 </head>
@@ -1189,7 +1232,7 @@
         <div class="footer-brand"><i class="fas fa-shield-alt"></i> Secure · Instant UTR Settlement</div>
     </main>
 
-    <!-- Add Transaction Modal with QR scan -->
+    <!-- Add Transaction Modal -->
     <div class="modal-overlay" id="addModal">
         <div class="modal-card">
             <h3><i class="fas fa-paper-plane"></i> New Transfer</h3>
@@ -1216,6 +1259,13 @@
                 <button id="confirmAddBtn" class="save-btn">Send & Save</button>
             </div>
         </div>
+    </div>
+
+    <!-- FULLSCREEN QR OVERLAY -->
+    <div class="qr-fullscreen-overlay" id="qrFullscreenOverlay">
+        <button class="qr-close-full" id="qrCloseFull"><i class="fas fa-times"></i></button>
+        <div id="qr-reader-full"></div>
+        <div class="qr-hint"><i class="fas fa-camera"></i> Position QR code in the center · Hold steady</div>
     </div>
 
     <!-- PIN Modal -->
@@ -1428,64 +1478,63 @@
             function showPinModal(bankKey) { pendingBalanceCheckBank = bankKey; document.getElementById('pinInput').value = ''; document.getElementById('pinBalanceDisplay').style.display = 'none'; document.getElementById('pinModal').classList.add('active'); }
             function verifyPin() { const entered = document.getElementById('pinInput').value; if (entered === PIN_CODE) { if (pendingBalanceCheckBank) { const bal = bankBalances[pendingBalanceCheckBank] || 0; document.getElementById('pinBalanceDisplay').style.display = 'block'; document.getElementById('pinBalanceDisplay').innerHTML = `₹${bal.toLocaleString()}`; setTimeout(() => { document.getElementById('pinModal').classList.remove('active'); document.getElementById('pinBalanceDisplay').style.display = 'none'; }, 3000); } } else { alert('Incorrect PIN. Try again.'); document.getElementById('pinInput').value = ''; document.getElementById('pinBalanceDisplay').style.display = 'none'; } }
 
-            // ----- QR SCANNER LOGIC (auto-fill beneficiary) -----
-            function startQrScanner() {
-                if (qrScanActive) return;
-                const readerDiv = document.getElementById('qr-reader');
-                readerDiv.style.display = 'block';
-                if (qrScannerInstance) {
-                    qrScannerInstance.clear();
-                    qrScannerInstance = null;
+            // ----- FULLSCREEN QR SCANNER -----
+            let fullScannerInstance = null;
+            function startFullscreenQr() {
+                const overlay = document.getElementById('qrFullscreenOverlay');
+                overlay.classList.add('active');
+                const readerDiv = document.getElementById('qr-reader-full');
+                readerDiv.innerHTML = ''; // clear previous
+                if (fullScannerInstance) {
+                    fullScannerInstance.clear().catch(() => { });
+                    fullScannerInstance = null;
                 }
-                qrScannerInstance = new Html5Qrcode("qr-reader");
-                const config = { fps: 15, qrbox: { width: 200, height: 200 } };
-                qrScannerInstance.start({ facingMode: "environment" }, config, onScanSuccess, onScanError);
-                qrScanActive = true;
+                fullScannerInstance = new Html5Qrcode("qr-reader-full");
+                const config = { fps: 20, qrbox: { width: 300, height: 300 } };
+                fullScannerInstance.start({ facingMode: "environment" }, config, onFullScanSuccess, onFullScanError);
             }
 
-            function onScanSuccess(decodedText, decodedResult) {
-                // decodedText might contain UPI format: "upi://pay?pa=xxx&pn=Beneficiary&..."
+            function onFullScanSuccess(decodedText, decodedResult) {
                 try {
                     let name = "";
-                    let upiId = "";
                     if (decodedText.includes("upi://")) {
                         const url = new URL(decodedText);
                         const params = new URLSearchParams(url.search);
-                        upiId = params.get('pa') || "";
                         name = params.get('pn') || "";
                     } else {
-                        // fallback: try to parse as plain text
                         name = decodedText.substring(0, 30);
                     }
                     if (name) document.getElementById('receiverName').value = name;
                     else document.getElementById('receiverName').value = decodedText.substring(0, 30);
-                    // close scanner
-                    stopQrScanner();
+                    // close fullscreen scanner
+                    stopFullscreenQr();
                     const toast = document.createElement('div'); toast.className = 'custom-toast'; toast.innerHTML = `<i class="fas fa-check"></i> QR scanned: ${name || 'Beneficiary'}`; document.body.appendChild(toast); setTimeout(() => toast.remove(), 2000);
                 } catch (e) {
                     document.getElementById('receiverName').value = decodedText.substring(0, 30);
-                    stopQrScanner();
+                    stopFullscreenQr();
                 }
             }
 
-            function onScanError(err) { /* ignore */ }
+            function onFullScanError(err) { /* ignore */ }
 
-            function stopQrScanner() {
-                if (qrScannerInstance) {
-                    qrScannerInstance.stop().then(() => {
-                        qrScannerInstance.clear();
-                        document.getElementById('qr-reader').style.display = 'none';
-                        qrScanActive = false;
-                    }).catch(() => { });
+            function stopFullscreenQr() {
+                if (fullScannerInstance) {
+                    fullScannerInstance.stop().then(() => {
+                        fullScannerInstance.clear();
+                        document.getElementById('qrFullscreenOverlay').classList.remove('active');
+                        fullScannerInstance = null;
+                    }).catch(() => {
+                        document.getElementById('qrFullscreenOverlay').classList.remove('active');
+                        fullScannerInstance = null;
+                    });
                 } else {
-                    document.getElementById('qr-reader').style.display = 'none';
-                    qrScanActive = false;
+                    document.getElementById('qrFullscreenOverlay').classList.remove('active');
                 }
             }
 
             // ----- EVENT BINDINGS -----
             document.getElementById('openAddBtn').addEventListener('click', () => { document.getElementById('addModal').classList.add('active'); const now = new Date(); now.setMinutes(now.getMinutes() - now.getTimezoneOffset()); document.getElementById('txnDatetime').value = now.toISOString().slice(0, 16); });
-            document.getElementById('cancelModalBtn').addEventListener('click', () => { document.getElementById('addModal').classList.remove('active'); stopQrScanner(); });
+            document.getElementById('cancelModalBtn').addEventListener('click', () => { document.getElementById('addModal').classList.remove('active'); stopFullscreenQr(); });
             document.getElementById('confirmAddBtn').addEventListener('click', () => {
                 const receiver = document.getElementById('receiverName').value.trim();
                 const amount = document.getElementById('amountValue').value;
@@ -1496,9 +1545,16 @@
                 if (!amount || parseFloat(amount) <= 0) { alert("Valid amount required"); return; }
                 if (!datetime) datetime = new Date().toISOString().slice(0, 16);
                 const success = addAndShowSuccess(receiver, parseFloat(amount), category, datetime, bankAccount);
-                if (success) { document.getElementById('receiverName').value = ''; document.getElementById('amountValue').value = ''; document.getElementById('addModal').classList.remove('active'); stopQrScanner(); }
+                if (success) { document.getElementById('receiverName').value = ''; document.getElementById('amountValue').value = ''; document.getElementById('addModal').classList.remove('active'); stopFullscreenQr(); }
             });
-            document.getElementById('scanQrBtn').addEventListener('click', startQrScanner);
+            // SCAN QR button opens FULLSCREEN overlay
+            document.getElementById('scanQrBtn').addEventListener('click', startFullscreenQr);
+            document.getElementById('qrCloseFull').addEventListener('click', stopFullscreenQr);
+            // close fullscreen if overlay background clicked (optional)
+            document.getElementById('qrFullscreenOverlay').addEventListener('click', function (e) {
+                if (e.target === this) stopFullscreenQr();
+            });
+
             document.getElementById('backArrow').addEventListener('click', () => alert("Dashboard overview • Secure environment"));
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]; const curDate = new Date(); document.getElementById('currentMonthDisplay').innerText = `${monthNames[curDate.getMonth()]} ${curDate.getFullYear()}`;
             document.getElementById('hdfcBalanceBtn').addEventListener('click', (e) => { e.stopPropagation(); showPinModal("HDFC Bank - 7753"); });
