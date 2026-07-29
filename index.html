@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>UPI QR Scanner - Actual Name Reader</title>
-    <!-- Tailwind CSS for Responsive Design -->
+    <title>AUPI QR Scanner</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Html5-Qrcode Library -->
-    <script src="https://unpkg.F/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <!-- Updated Stable Html5-Qrcode Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexqpHvgxvNk4Rs7QHkGnkUBAku/UKLqZUQjv1TusPj51XZ48MA7GFK78Fg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
-<body class="bg-slate-100 font-sans min-f-screen flex flex-col items-center justify-center p-4">
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
 
     <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-6">
         <!-- Header -->
@@ -20,27 +20,35 @@
                 <i class="fa-solid fa-qrcode"></i>
             </div>
             <h1 class="text-xl font-bold text-slate-800">UPI QR Name Scanner</h1>
-            <p class="text-xs text-slate-500 mt-1">Scan any UPI QR to get the Actual Name & UPI ID</p>
+            <p class="text-xs text-slate-500 mt-1">Scan any UPI QR to get Actual Name</p>
         </div>
 
-        <!-- Scanner Box -->
-        <div class="relative bg-black rounded-2xl overflow-hidden shadow-inner mb-6 flex items-center justify-center" style="min-height: 280px;">
+        <!-- Scanner Viewport -->
+        <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-4 flex items-center justify-center" style="min-height: 280px;">
             <div id="qr-reader" class="w-full"></div>
-            <!-- Scanner Overlay Guide -->
+            <!-- Placeholder -->
             <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-4 pointer-events-none">
-                <i class="fa-solid fa-camera text-4xl mb-2 animate-pulse"></i>
-                <p class="text-sm">Camera is inactive</p>
+                <i class="fa-solid fa-camera text-4xl mb-2 animate-bounce"></i>
+                <p class="text-sm font-medium">Click Start Scan Below</p>
             </div>
         </div>
 
         <!-- Action Buttons -->
-        <div class="flex gap-3 mb-6">
+        <div class="flex gap-3 mb-4">
             <button onclick="startScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
-                <i class="fa-solid fa-play"></i> Start Scan
+                <i class="fa-solid fa-play"></i> Start Camera
             </button>
             <button onclick="stopScanner()" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-3 px-4 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
                 <i class="fa-solid fa-stop"></i> Stop
             </button>
+        </div>
+
+        <!-- Alternative: Upload QR Image from Gallery -->
+        <div class="mb-6">
+            <label class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 cursor-pointer transition-all">
+                <i class="fa-solid fa-image text-indigo-600"></i> Upload QR from Gallery
+                <input type="file" id="qr-file-input" accept="image/*" class="hidden" onchange="scanImageFromFile(event)">
+            </label>
         </div>
 
         <!-- Result Box -->
@@ -59,14 +67,14 @@
                     <span id="res-upi" class="font-semibold text-indigo-600 text-right">-</span>
                 </div>
                 <div class="flex flex-col pt-1">
-                    <span class="text-slate-500 font-medium text-xs mb-1">Raw QR Data:</span>
+                    <span class="text-slate-500 font-medium text-xs mb-1">Raw Data:</span>
                     <span id="res-raw" class="bg-slate-200/60 p-2 rounded-lg text-xs text-slate-600 break-all font-mono">-</span>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- JavaScript Logic -->
+    <!-- JavaScript Script -->
     <script>
         let html5QrCode = null;
         let isScanning = false;
@@ -91,7 +99,7 @@
                 isScanning = true;
                 placeholder.style.display = 'none';
             }).catch(err => {
-                alert("Camera Access Denied or Not Supported! Please allow camera permissions.");
+                alert("Camera Error: Please make sure you are using HTTPS or Localhost, and camera permission is allowed.");
                 console.error("Scanner Error: ", err);
             });
         }
@@ -106,42 +114,48 @@
         }
 
         function onScanSuccess(decodedText, decodedResult) {
-            // Scan hote hi scanner rok dein
             stopScanner();
-            
-            // Data Parse Karein
-            const parsedData = parseUPIQRCode(decodedText);
-
-            // UI par Data Show Karein
-            document.getElementById('res-name').innerText = parsedData.name;
-            document.getElementById('res-upi').innerText = parsedData.upi;
-            document.getElementById('res-raw').innerText = decodedText;
-            
-            document.getElementById('result-box').classList.remove('hidden');
+            displayResults(decodedText);
         }
 
         function onScanError(errorMessage) {
-            // Frame scanning errors ignore kiye jate hain jab tak QR na mile
+            // Background scanning errors ignore kiye jate hain
         }
 
-        // UPI QR String se Name aur UPI ID extract karne ka core function
-        function parseUPIQRCode(text) {
+        // Gallery se image upload karke scan karne ke liye
+        function scanImageFromFile(e) {
+            if (e.target.files.length == 0) return;
+            const imageFile = e.target.files[0];
+            
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("qr-reader");
+            }
+
+            html5QrCode.scanFile(imageFile, true)
+                .then(decodedText => {
+                    displayResults(decodedText);
+                })
+                .catch(err => {
+                    alert("Could not read QR code from this image. Please try another clear screenshot.");
+                    console.error("File scan error:", err);
+                });
+        }
+
+        // Common function to parse and show data
+        function displayResults(decodedText) {
             let name = "Unknown / Not Found";
             let upi = "Not Available";
 
-            // 1. Check if it's a standard UPI URL format (upi://pay?...)
-            if (text.includes('upi://')) {
+            if (decodedText.includes('upi://')) {
                 try {
-                    const upiIndex = text.indexOf('upi://');
-                    const cleanUrl = text.substring(upiIndex);
+                    const upiIndex = decodedText.indexOf('upi://');
+                    const cleanUrl = decodedText.substring(upiIndex);
                     const url = new URL(cleanUrl);
                     const params = new URLSearchParams(url.search);
 
-                    // 'pn' parameter = Payee Name (Actual Name)
                     if (params.has('pn')) {
                         name = decodeURIComponent(params.get('pn'));
                     }
-                    // 'pa' parameter = Payee Address (UPI ID)
                     if (params.has('pa')) {
                         upi = params.get('pa');
                     }
@@ -150,21 +164,21 @@
                 }
             } 
             
-            // 2. Fallback: Agar URL format na ho lekin UPI ID ho
             if (upi === "Not Available") {
                 const upiRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)/;
-                const match = text.match(upiRegex);
+                const match = decodedText.match(upiRegex);
                 if (match) {
                     upi = match[1];
-                    if (name === "Unknown / Not Found") {
-                        let namePart = upi.split('@')[0];
-                        name = namePart.replace(/[0-9]/g, ' ').trim();
-                        name = name.charAt(0).toUpperCase() + name.slice(1);
-                    }
+                    let namePart = upi.split('@')[0];
+                    name = namePart.replace(/[0-9]/g, ' ').trim();
+                    name = name.charAt(0).toUpperCase() + name.slice(1);
                 }
             }
 
-            return { name, upi };
+            document.getElementById('res-name').innerText = name;
+            document.getElementById('res-upi').innerText = upi;
+            document.getElementById('res-raw').innerText = decodedText;
+            document.getElementById('result-box').classList.remove('hidden');
         }
     </script>
 </body>
