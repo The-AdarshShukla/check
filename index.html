@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AUPI QR Scanner</title>
+    <title>Advanced UPI QR Scanner</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Updated Stable Html5-Qrcode Library -->
+    <!-- Html5-Qrcode Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexqpHvgxvNk4Rs7QHkGnkUBAku/UKLqZUQjv1TusPj51XZ48MA7GFK78Fg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
@@ -20,16 +20,16 @@
                 <i class="fa-solid fa-qrcode"></i>
             </div>
             <h1 class="text-xl font-bold text-slate-800">UPI QR Name Scanner</h1>
-            <p class="text-xs text-slate-500 mt-1">Scan any UPI QR to get Actual Name</p>
+            <p class="text-xs text-slate-500 mt-1">Scan any UPI QR to get Actual Name & VPA</p>
         </div>
 
         <!-- Scanner Viewport -->
         <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-4 flex items-center justify-center" style="min-height: 280px;">
             <div id="qr-reader" class="w-full"></div>
             <!-- Placeholder -->
-            <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-4 pointer-events-none">
+            <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-4 pointer-events-none z-10 bg-slate-900">
                 <i class="fa-solid fa-camera text-4xl mb-2 animate-bounce"></i>
-                <p class="text-sm font-medium">Click Start Scan Below</p>
+                <p class="text-sm font-medium">Click Start Camera Below</p>
             </div>
         </div>
 
@@ -119,10 +119,10 @@
         }
 
         function onScanError(errorMessage) {
-            // Background scanning errors ignore kiye jate hain
+            // Background scanning errors can be ignored
         }
 
-        // Gallery se image upload karke scan karne ke liye
+        // Gallery Image Scanner
         function scanImageFromFile(e) {
             if (e.target.files.length == 0) return;
             const imageFile = e.target.files[0];
@@ -141,37 +141,36 @@
                 });
         }
 
-        // Common function to parse and show data
+        // Parse UPI Data and Display
         function displayResults(decodedText) {
             let name = "Unknown / Not Found";
             let upi = "Not Available";
 
+            // Clean check for UPI string
             if (decodedText.includes('upi://')) {
                 try {
-                    const upiIndex = decodedText.indexOf('upi://');
-                    const cleanUrl = decodedText.substring(upiIndex);
-                    const url = new URL(cleanUrl);
-                    const params = new URLSearchParams(url.search);
-
-                    if (params.has('pn')) {
-                        name = decodeURIComponent(params.get('pn'));
-                    }
-                    if (params.has('pa')) {
-                        upi = params.get('pa');
+                    // Extract parameters safely using URLSearchParams
+                    const urlParams = decodedText.split('?')[1];
+                    if (urlParams) {
+                        const params = new URLSearchParams(urlParams);
+                        if (params.has('pn')) {
+                            name = decodeURIComponent(params.get('pn').replace(/\+/g, ' '));
+                        }
+                        if (params.has('pa')) {
+                            upi = params.get('pa');
+                        }
                     }
                 } catch (e) {
-                    console.error("URL Parsing error:", e);
+                    console.error("Parsing error:", e);
                 }
             } 
             
+            // Fallback if standard parameters are missing
             if (upi === "Not Available") {
                 const upiRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)/;
                 const match = decodedText.match(upiRegex);
                 if (match) {
                     upi = match[1];
-                    let namePart = upi.split('@')[0];
-                    name = namePart.replace(/[0-9]/g, ' ').trim();
-                    name = name.charAt(0).toUpperCase() + name.slice(1);
                 }
             }
 
