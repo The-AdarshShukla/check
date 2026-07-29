@@ -2,183 +2,375 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced UPI QR Scanner</title>
-    <!-- Tailwind CSS -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UPI QR Scanner · Actual Name</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Html5-Qrcode Library -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js" integrity="sha512-r6rDA7W6ZeQhvl8S7yRVQUKVHdexqpHvgxvNk4Rs7QHkGnkUBAku/UKLqZUQjv1TusPj51XZ48MA7GFK78Fg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        #scanner-placeholder {
+            transition: opacity 0.2s ease;
+        }
+        #qr-reader {
+            min-height: 280px;
+            width: 100%;
+        }
+        #qr-reader video {
+            border-radius: 1rem;
+            object-fit: cover;
+        }
+        #qr-reader canvas {
+            display: none !important;
+        }
+        #qr-reader__dashboard_section_csr {
+            display: none !important;
+        }
+        .result-card {
+            animation: fadeSlide 0.3s ease;
+        }
+        @keyframes fadeSlide {
+            0% { opacity: 0; transform: translateY(8px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+        .bg-soft {
+            background: #f8fafc;
+        }
+        .name-highlight {
+            background: linear-gradient(120deg, #dbeafe 0%, #dbeafe 40%, transparent 80%);
+            padding: 0 4px;
+        }
+    </style>
 </head>
-<body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-4">
+<body class="bg-slate-100 font-sans min-h-screen flex flex-col items-center justify-center p-3 md:p-4">
 
-    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-6">
-        <!-- Header -->
-        <div class="text-center mb-6">
+    <div class="w-full max-w-md bg-white rounded-3xl shadow-xl overflow-hidden p-5 md:p-6 border border-slate-200/80">
+        <!-- header -->
+        <div class="text-center mb-5">
             <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl shadow-inner">
                 <i class="fa-solid fa-qrcode"></i>
             </div>
-            <h1 class="text-xl font-bold text-slate-800">UPI QR Name Scanner</h1>
-            <p class="text-xs text-slate-500 mt-1">Scan any UPI QR to get Actual Name & VPA</p>
+            <h1 class="text-xl font-bold text-slate-800 tracking-tight">UPI QR · Actual Name Finder</h1>
+            <p class="text-xs text-slate-500 mt-1">Extracts real business/personal name from QR</p>
         </div>
 
-        <!-- Scanner Viewport -->
+        <!-- scanner viewport -->
         <div class="relative bg-slate-900 rounded-2xl overflow-hidden shadow-inner mb-4 flex items-center justify-center" style="min-height: 280px;">
             <div id="qr-reader" class="w-full"></div>
-            <!-- Placeholder -->
-            <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/70 p-4 pointer-events-none z-10 bg-slate-900">
-                <i class="fa-solid fa-camera text-4xl mb-2 animate-bounce"></i>
-                <p class="text-sm font-medium">Click Start Camera Below</p>
+            <div id="scanner-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-white/80 p-4 pointer-events-none z-10 bg-slate-900/90 backdrop-blur-sm">
+                <i class="fa-solid fa-camera text-5xl mb-3 text-indigo-300 animate-pulse"></i>
+                <p class="text-sm font-medium tracking-wide">Tap "Start Camera"</p>
+                <p class="text-[10px] text-white/50 mt-1">or upload a QR image</p>
             </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex gap-3 mb-4">
-            <button onclick="startScanner()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
-                <i class="fa-solid fa-play"></i> Start Camera
+        <!-- action row -->
+        <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="startScanner()" class="flex-1 min-w-[100px] bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white py-3 px-4 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-play"></i> Start
             </button>
-            <button onclick="stopScanner()" class="flex-1 bg-rose-500 hover:bg-rose-600 text-white py-3 px-4 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
+            <button onclick="stopScanner()" class="flex-1 min-w-[100px] bg-rose-500 hover:bg-rose-600 active:scale-[0.98] text-white py-3 px-4 rounded-xl font-semibold shadow-md transition-all flex items-center justify-center gap-2">
                 <i class="fa-solid fa-stop"></i> Stop
             </button>
         </div>
 
-        <!-- Alternative: Upload QR Image from Gallery -->
-        <div class="mb-6">
-            <label class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 cursor-pointer transition-all">
+        <!-- upload image -->
+        <div class="mb-5">
+            <label class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 py-2.5 px-4 rounded-xl font-medium text-sm flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98]">
                 <i class="fa-solid fa-image text-indigo-600"></i> Upload QR from Gallery
                 <input type="file" id="qr-file-input" accept="image/*" class="hidden" onchange="scanImageFromFile(event)">
             </label>
         </div>
 
-        <!-- Result Box -->
-        <div id="result-box" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-4 shadow-sm">
+        <!-- result box -->
+        <div id="result-box" class="hidden bg-soft border border-slate-200 rounded-2xl p-4 shadow-sm result-card">
             <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
                 <i class="fa-solid fa-circle-check text-emerald-500"></i> Scanned Details
             </h2>
-            
             <div class="space-y-2 text-sm">
                 <div class="flex justify-between border-b border-slate-200 pb-2">
                     <span class="text-slate-500 font-medium">Actual Name:</span>
-                    <span id="res-name" class="font-bold text-slate-800 text-right">-</span>
+                    <span id="res-name" class="font-bold text-indigo-700 text-right max-w-[60%] truncate">-</span>
                 </div>
                 <div class="flex justify-between border-b border-slate-200 pb-2">
                     <span class="text-slate-500 font-medium">UPI ID / VPA:</span>
-                    <span id="res-upi" class="font-semibold text-indigo-600 text-right">-</span>
+                    <span id="res-upi" class="font-semibold text-indigo-600 text-right max-w-[60%] truncate">-</span>
                 </div>
                 <div class="flex flex-col pt-1">
-                    <span class="text-slate-500 font-medium text-xs mb-1">Raw Data:</span>
-                    <span id="res-raw" class="bg-slate-200/60 p-2 rounded-lg text-xs text-slate-600 break-all font-mono">-</span>
+                    <span class="text-slate-500 font-medium text-xs mb-1">Raw QR data:</span>
+                    <span id="res-raw" class="bg-slate-200/70 p-2 rounded-lg text-xs text-slate-700 break-all font-mono">-</span>
                 </div>
             </div>
+            <div class="mt-3 text-right">
+                <button onclick="clearResult()" class="text-xs text-slate-400 hover:text-slate-600 transition-all font-medium underline-offset-2 underline">Clear</button>
+            </div>
         </div>
+
+        <p class="text-[10px] text-slate-400 text-center mt-4">🔍 Works with all UPI QR codes · Shows actual name from QR data</p>
     </div>
 
-    <!-- JavaScript Script -->
     <script>
+        // ------------------ state ------------------
         let html5QrCode = null;
         let isScanning = false;
 
+        // ------------------ DOM refs ------------------
+        const placeholder = document.getElementById('scanner-placeholder');
+        const resultBox = document.getElementById('result-box');
+        const resName = document.getElementById('res-name');
+        const resUpi = document.getElementById('res-upi');
+        const resRaw = document.getElementById('res-raw');
+
+        // ------------------ core scanner ------------
+        function getQrInstance() {
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("qr-reader", {
+                    formatsToSupport: [ Html5QrcodeSupportedFormats.QR_CODE ],
+                    verbose: false
+                });
+            }
+            return html5QrCode;
+        }
+
         function startScanner() {
-            const placeholder = document.getElementById('scanner-placeholder');
-            
             if (isScanning) return;
 
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("qr-reader");
-            }
+            const qr = getQrInstance();
+            const config = {
+                fps: 12,
+                qrbox: { width: 240, height: 240 },
+                aspectRatio: 1.0
+            };
 
-            const config = { fps: 10, qrbox: { width: 230, height: 230 } };
-
-            html5QrCode.start(
-                { facingMode: "environment" }, 
-                config, 
-                onScanSuccess, 
-                onScanError
+            qr.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                (err) => { /* ignore */ }
             ).then(() => {
                 isScanning = true;
                 placeholder.style.display = 'none';
-            }).catch(err => {
-                alert("Camera Error: Please make sure you are using HTTPS or Localhost, and camera permission is allowed.");
-                console.error("Scanner Error: ", err);
+                resultBox.classList.add('hidden');
+            }).catch((err) => {
+                console.warn("Camera error:", err);
+                alert("⚠️ Camera access failed.\nPlease use HTTPS or localhost.\n\nError: " + err);
+                placeholder.style.display = 'flex';
+                isScanning = false;
             });
         }
 
         function stopScanner() {
             if (html5QrCode && isScanning) {
-                html5QrCode.stop().then(() => {
-                    isScanning = false;
-                    document.getElementById('scanner-placeholder').style.display = 'flex';
-                }).catch(err => console.error("Stop error: ", err));
+                html5QrCode.stop()
+                    .then(() => {
+                        isScanning = false;
+                        placeholder.style.display = 'flex';
+                    })
+                    .catch((e) => console.warn("Stop error:", e));
+            } else {
+                if (html5QrCode) {
+                    html5QrCode.stop().catch(()=>{});
+                }
+                isScanning = false;
+                placeholder.style.display = 'flex';
             }
         }
 
-        function onScanSuccess(decodedText, decodedResult) {
+        // ------------------ scan success ------------
+        function onScanSuccess(decodedText) {
             stopScanner();
             displayResults(decodedText);
         }
 
-        function onScanError(errorMessage) {
-            // Background scanning errors can be ignored
-        }
-
-        // Gallery Image Scanner
+        // ------------------ upload image ------------
         function scanImageFromFile(e) {
-            if (e.target.files.length == 0) return;
-            const imageFile = e.target.files[0];
-            
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("qr-reader");
-            }
+            const file = e.target.files[0];
+            if (!file) return;
 
-            html5QrCode.scanFile(imageFile, true)
-                .then(decodedText => {
+            const qr = getQrInstance();
+            qr.scanFile(file, true)
+                .then((decodedText) => {
                     displayResults(decodedText);
                 })
-                .catch(err => {
-                    alert("Could not read QR code from this image. Please try another clear screenshot.");
+                .catch((err) => {
+                    alert("❌ Could not read QR from this image.\nPlease try a clear screenshot.\n\n" + err);
                     console.error("File scan error:", err);
                 });
+            e.target.value = '';
         }
 
-        // Parse UPI Data and Display
+        // ------------------ ADVANCED DISPLAY: EXTRACT ACTUAL NAME ------------
         function displayResults(decodedText) {
-            let name = "Unknown / Not Found";
-            let upi = "Not Available";
+            let actualName = "Unknown";
+            let upiId = "Not found";
 
-            // Clean check for UPI string
-            if (decodedText.includes('upi://')) {
+            // ----- STEP 1: Try to parse as UPI deep link -----
+            if (decodedText && decodedText.startsWith("upi://")) {
                 try {
-                    // Extract parameters safely using URLSearchParams
-                    const urlParams = decodedText.split('?')[1];
-                    if (urlParams) {
-                        const params = new URLSearchParams(urlParams);
-                        if (params.has('pn')) {
-                            name = decodeURIComponent(params.get('pn').replace(/\+/g, ' '));
-                        }
-                        if (params.has('pa')) {
-                            upi = params.get('pa');
+                    const url = new URL(decodedText);
+                    const params = new URLSearchParams(url.search);
+                    
+                    // ----- PRIMARY: Extract 'pn' (payer name) - THIS IS THE ACTUAL NAME -----
+                    if (params.has('pn')) {
+                        let rawName = params.get('pn');
+                        // Decode URI component and replace '+' with space
+                        rawName = decodeURIComponent(rawName.replace(/\+/g, ' '));
+                        actualName = rawName.trim() || "Unknown";
+                    } 
+                    
+                    // ----- SECONDARY: If no 'pn', try 'tn' (transaction note) - often contains name -----
+                    if (actualName === "Unknown" && params.has('tn')) {
+                        let tn = params.get('tn');
+                        tn = decodeURIComponent(tn.replace(/\+/g, ' '));
+                        // Check if tn contains a meaningful name (not just transaction ID)
+                        if (tn && tn.length > 0 && !tn.match(/^\d+$/)) {
+                            actualName = tn.trim();
                         }
                     }
+
+                    // ----- TERTIARY: If still unknown, try 'name' parameter (some apps use this) -----
+                    if (actualName === "Unknown" && params.has('name')) {
+                        let nameParam = params.get('name');
+                        nameParam = decodeURIComponent(nameParam.replace(/\+/g, ' '));
+                        if (nameParam && nameParam.length > 0) {
+                            actualName = nameParam.trim();
+                        }
+                    }
+
+                    // ----- Extract UPI ID (pa) -----
+                    if (params.has('pa')) {
+                        upiId = decodeURIComponent(params.get('pa'));
+                    } else {
+                        // Fallback: regex to find UPI ID
+                        const upiRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)/;
+                        const match = decodedText.match(upiRegex);
+                        if (match) upiId = match[1];
+                    }
+
                 } catch (e) {
-                    console.error("Parsing error:", e);
+                    console.warn("URL parsing error, using fallback:", e);
+                    // Fallback parsing
+                    actualName = extractNameFromRaw(decodedText);
+                    upiId = extractUpiFromRaw(decodedText);
                 }
-            } 
-            
-            // Fallback if standard parameters are missing
-            if (upi === "Not Available") {
-                const upiRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)/;
-                const match = decodedText.match(upiRegex);
-                if (match) {
-                    upi = match[1];
+            } else {
+                // ----- NOT a standard UPI link, try fallback extraction -----
+                actualName = extractNameFromRaw(decodedText);
+                upiId = extractUpiFromRaw(decodedText);
+            }
+
+            // ----- FINAL FALLBACK: If name still unknown but UPI found, use local part of UPI as name -----
+            if ((actualName === "Unknown" || actualName === "Unnamed") && upiId !== "Not found" && upiId.includes('@')) {
+                const localPart = upiId.split('@')[0];
+                if (localPart && localPart.length > 1) {
+                    actualName = localPart;
                 }
             }
 
-            document.getElementById('res-name').innerText = name;
-            document.getElementById('res-upi').innerText = upi;
-            document.getElementById('res-raw').innerText = decodedText;
-            document.getElementById('result-box').classList.remove('hidden');
+            // ----- CLEANUP: Remove "Verified Merchant" if it appears and we have better data -----
+            if (actualName.toLowerCase().includes("verified merchant") || actualName.toLowerCase().includes("merchant")) {
+                // Try to extract actual name from raw data one more time
+                const betterName = extractNameFromRaw(decodedText);
+                if (betterName !== "Unknown" && !betterName.toLowerCase().includes("merchant")) {
+                    actualName = betterName;
+                }
+            }
+
+            // Ensure we have something meaningful
+            if (actualName.trim() === "" || actualName === "Unknown") {
+                actualName = "Unnamed";
+            }
+
+            // Update UI
+            resName.innerText = actualName;
+            resUpi.innerText = upiId;
+            resRaw.innerText = decodedText;
+            resultBox.classList.remove('hidden');
         }
+
+        // ------------------ HELPER: Extract name from raw text using multiple patterns -----
+        function extractNameFromRaw(text) {
+            if (!text) return "Unknown";
+            
+            // Try various patterns to find name
+            const patterns = [
+                /[?&]pn=([^&]*)/i,
+                /[?&]name=([^&]*)/i,
+                /[?&]merchant=([^&]*)/i,
+                /[?&]payee=([^&]*)/i,
+                /[?&]tn=([^&]*)/i,
+                /[?&]description=([^&]*)/i,
+                /[?&]note=([^&]*)/i
+            ];
+
+            for (let pattern of patterns) {
+                const match = text.match(pattern);
+                if (match) {
+                    try {
+                        let value = decodeURIComponent(match[1].replace(/\+/g, ' '));
+                        // Filter out generic values
+                        if (value && value.length > 0 && 
+                            !value.toLowerCase().includes("payment") &&
+                            !value.toLowerCase().includes("transaction") &&
+                            !value.toLowerCase().includes("verified") &&
+                            !value.match(/^\d+$/)) {
+                            return value.trim();
+                        }
+                    } catch (_) { /* continue */ }
+                }
+            }
+
+            // If no specific parameter, try to find a name-like pattern in the raw text
+            // Look for text between common delimiters
+            const nameMatch = text.match(/(?:name|merchant|payee|title)[:=]\s*([^&,;]+)/i);
+            if (nameMatch) {
+                try {
+                    let value = decodeURIComponent(nameMatch[1].trim());
+                    if (value && value.length > 0 && !value.toLowerCase().includes("verified")) {
+                        return value;
+                    }
+                } catch (_) {}
+            }
+
+            return "Unknown";
+        }
+
+        // ------------------ HELPER: Extract UPI from raw text -----
+        function extractUpiFromRaw(text) {
+            if (!text) return "Not found";
+            
+            const upiRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+)/;
+            const match = text.match(upiRegex);
+            if (match) {
+                return match[1];
+            }
+            
+            // Try to find VPA in parameters
+            const paMatch = text.match(/[?&]pa=([^&]*)/i);
+            if (paMatch) {
+                try {
+                    return decodeURIComponent(paMatch[1]);
+                } catch (_) {}
+            }
+            
+            return "Not found";
+        }
+
+        // ------------------ clear result ------------
+        function clearResult() {
+            resultBox.classList.add('hidden');
+            resName.innerText = '-';
+            resUpi.innerText = '-';
+            resRaw.innerText = '-';
+        }
+
+        // ------------------ cleanup ------------
+        window.addEventListener('beforeunload', function() {
+            if (html5QrCode && isScanning) {
+                html5QrCode.stop().catch(()=>{});
+            }
+        });
+
+        console.log("✅ UPI Scanner with Actual Name extraction ready!");
     </script>
 </body>
 </html>
